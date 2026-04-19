@@ -1,4 +1,4 @@
-// server.js
+// server.js (full)
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
@@ -7,17 +7,14 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors()); // Allow requests from your app and website
+app.use(cors());
 app.use(express.json());
 
-// Supabase Client (using service_role key for full access)
-// WARNING: Keep this key secret! Never expose it in frontend code.
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// --- Helper: Get ID from name (for exam types) ---
+// Helper: get exam type ID from name
 async function getExamTypeId(name) {
     const { data } = await supabase
         .from('exam_types')
@@ -27,19 +24,13 @@ async function getExamTypeId(name) {
     return data?.id;
 }
 
-// ==================== API ENDPOINTS ====================
-
-// GET /subjects
+// -------------------- SUBJECTS --------------------
 app.get('/subjects', async (req, res) => {
-    const { data, error } = await supabase
-        .from('subjects')
-        .select('*')
-        .order('name');
+    const { data, error } = await supabase.from('subjects').select('*').order('name');
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
 });
 
-// POST /subjects
 app.post('/subjects', async (req, res) => {
     const { name, icon, color, bg } = req.body;
     const { data, error } = await supabase
@@ -50,7 +41,6 @@ app.post('/subjects', async (req, res) => {
     res.status(201).json(data[0]);
 });
 
-// DELETE /subjects/:id
 app.delete('/subjects/:id', async (req, res) => {
     const { id } = req.params;
     const { error } = await supabase.from('subjects').delete().eq('id', id);
@@ -58,17 +48,14 @@ app.delete('/subjects/:id', async (req, res) => {
     res.status(204).send();
 });
 
-// GET /exam-types
+// -------------------- EXAM TYPES --------------------
 app.get('/exam-types', async (req, res) => {
-    const { data, error } = await supabase
-        .from('exam_types')
-        .select('*')
-        .order('name');
+    const { data, error } = await supabase.from('exam_types').select('*').order('name');
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
 });
 
-// GET /years (all years, ordered descending)
+// -------------------- YEARS --------------------
 app.get('/years', async (req, res) => {
     const { data, error } = await supabase
         .from('years')
@@ -78,7 +65,6 @@ app.get('/years', async (req, res) => {
     res.json(data);
 });
 
-// POST /years
 app.post('/years', async (req, res) => {
     const { year } = req.body;
     const { data, error } = await supabase
@@ -89,7 +75,6 @@ app.post('/years', async (req, res) => {
     res.status(201).json(data[0]);
 });
 
-// DELETE /years/:id
 app.delete('/years/:id', async (req, res) => {
     const { id } = req.params;
     const { error } = await supabase.from('years').delete().eq('id', id);
@@ -97,8 +82,7 @@ app.delete('/years/:id', async (req, res) => {
     res.status(204).send();
 });
 
-// GET /years-available?subject_id=...&exam_type=...
-// Returns distinct years that have questions for given filters
+// -------------------- YEARS AVAILABLE (for app) --------------------
 app.get('/years-available', async (req, res) => {
     const { subject_id, exam_type } = req.query;
     let query = supabase
@@ -115,16 +99,14 @@ app.get('/years-available', async (req, res) => {
     const { data, error } = await query;
     if (error) return res.status(500).json({ error: error.message });
 
-    // Extract unique years
     const years = [...new Set(data.map(item => item.years.year))];
     res.json(years);
 });
 
-// GET /questions?subject_id=...&year=...&exam_type=...
+// -------------------- QUESTIONS --------------------
 app.get('/questions', async (req, res) => {
     const { subject_id, year, exam_type } = req.query;
     
-    // Build query
     let query = supabase
         .from('questions')
         .select(`
@@ -151,7 +133,6 @@ app.get('/questions', async (req, res) => {
     const { data, error } = await query;
     if (error) return res.status(500).json({ error: error.message });
     
-    // Transform to cleaner format
     const questions = data.map(q => ({
         id: q.id,
         text: q.question_text,
@@ -165,7 +146,6 @@ app.get('/questions', async (req, res) => {
     res.json(questions);
 });
 
-// POST /questions
 app.post('/questions', async (req, res) => {
     const {
         subject_id, exam_type_id, year_id,
@@ -186,7 +166,6 @@ app.post('/questions', async (req, res) => {
     res.status(201).json(data[0]);
 });
 
-// Start server
 app.listen(port, () => {
     console.log(`Learning Lounge API running on port ${port}`);
 });
