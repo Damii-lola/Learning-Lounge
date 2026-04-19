@@ -176,3 +176,34 @@ app.post('/questions', async (req, res) => {
 app.listen(port, () => {
     console.log(`Learning Lounge API running on port ${port}`);
 });
+
+// PUT /questions/:id – Update a question
+app.put('/questions/:id', async (req, res) => {
+    const { id } = req.params;
+    const {
+        subject_id, exam_type_id, year_id,
+        question_text, option_a, option_b, option_c, option_d,
+        correct_option, explanation
+    } = req.body;
+
+    const { data, error } = await supabase
+        .from('questions')
+        .update({
+            subject_id, exam_type_id, year_id,
+            question_text, option_a, option_b, option_c, option_d,
+            correct_option, explanation
+        })
+        .eq('id', id)
+        .select();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data[0]);
+});
+
+// DELETE /questions/:id – Delete a question
+app.delete('/questions/:id', async (req, res) => {
+    const { id } = req.params;
+    const { error } = await supabase.from('questions').delete().eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(204).send();
+});
